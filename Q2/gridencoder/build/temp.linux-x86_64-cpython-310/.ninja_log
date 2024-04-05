@@ -1,3 +1,5 @@
 # ninja log v5
 0	10156	1707064585608519082	/data/ruihan/16825/a4_internal/Q2/stable-dreamfusion/gridencoder/build/temp.linux-x86_64-cpython-310/data/ruihan/16825/a4_internal/Q2/stable-dreamfusion/gridencoder/src/bindings.o	cad7ba30cd96aa9a
 0	151401	1707064726842755306	/data/ruihan/16825/a4_internal/Q2/stable-dreamfusion/gridencoder/build/temp.linux-x86_64-cpython-310/data/ruihan/16825/a4_internal/Q2/stable-dreamfusion/gridencoder/src/gridencoder.o	c9bbd31ba1b7d342
+89	23347	1712293632351618006	/project_data/ramanan/kewenwu/as4/assignment4/Q2/gridencoder/build/temp.linux-x86_64-cpython-310/project_data/ramanan/kewenwu/as4/assignment4/Q2/gridencoder/src/bindings.o	fffd11501b28bcb8
+89	193586	1712293802573561566	/project_data/ramanan/kewenwu/as4/assignment4/Q2/gridencoder/build/temp.linux-x86_64-cpython-310/project_data/ramanan/kewenwu/as4/assignment4/Q2/gridencoder/src/gridencoder.o	b4389b61cd6135d4

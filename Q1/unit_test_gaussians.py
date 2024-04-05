@@ -16,7 +16,7 @@ def run_test_1():
     """
     gaussians = Gaussians(
         num_points=10000, init_type="random",
-        device="cpu", isotropic=True
+        device="cpu", isotropic=False
     )
 
     scales = torch.tensor([
@@ -26,7 +26,7 @@ def run_test_1():
         [ 2.0091],
         [-1.0004]
     ]).to(torch.float32)
-
+    scales = scales.repeat(1,3)
     quats = torch.tensor([
         [ 0.3243, -0.3977,  0.7983, -0.3153],
         [ 0.5657,  0.2395, -0.5910,  0.5228],

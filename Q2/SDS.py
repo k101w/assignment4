@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 from diffusers import DDIMScheduler, StableDiffusionPipeline
-
+import pdb
 
 class SDS:
     """
@@ -41,7 +41,7 @@ class SDS:
 
         # Create model
         sd_pipe = StableDiffusionPipeline.from_pretrained(
-            sd_model_key, torch_dtype=self.precision_t
+            sd_model_key, torch_dtype=self.precision_t, cache_dir = "/project_data/ramanan/kewenwu/as4/assignment4/Q2"
         ).to(device)
 
         self.vae = sd_pipe.vae
@@ -49,7 +49,7 @@ class SDS:
         self.text_encoder = sd_pipe.text_encoder
         self.unet = sd_pipe.unet
         self.scheduler = DDIMScheduler.from_pretrained(
-            sd_model_key, subfolder="scheduler", torch_dtype=self.precision_t
+            sd_model_key, subfolder="scheduler", torch_dtype=self.precision_t,cache_dir = "/project_data/ramanan/kewenwu/as4/assignment4/Q2"
         )
         del sd_pipe
 
@@ -151,19 +151,73 @@ class SDS:
         # predict the noise residual with unet, NO grad!
         with torch.no_grad():
             ### YOUR CODE HERE ###
- 
-
+            noise = torch.randn_like(latents)
+            x_t = self.scheduler.add_noise(latents, noise, t)    
+            noise_predict = self.unet(x_t, t, text_embeddings)["sample"]     
             if text_embeddings_uncond is not None and guidance_scale != 1:
-                ### YOUR CODE HERE ###
-                pass
+            #     ### YOUR CODE HERE ###
+                noise_predict_uncond = self.unet(x_t, t, text_embeddings_uncond)["sample"]
+                noise_predict = noise_predict + guidance_scale * (noise_predict - noise_predict_uncond)
+
  
-
-
         # Compute SDS loss
         w = 1 - self.alphas[t]
         ### YOUR CODE HERE ###
-
-
-        loss = 
+        grad = grad_scale * w * (noise_predict - noise)
+        target = (latents - grad).detach()
+        loss = 0.5*F.mse_loss(latents, target)/ latents.shape[0]
 
         return loss
+
+
+    # def sds_loss(
+    #     self,
+    #     latents,
+    #     text_embeddings,
+    #     text_embeddings_uncond=None,
+    #     guidance_scale=100,
+    #     grad_scale=1,
+    # ):
+    #     """
+    #     Compute the SDS loss.
+
+    #     Args:
+    #         latents (tensor): input latents, shape [1, 4, 64, 64]
+    #         text_embeddings (tensor): conditional text embedding (for positive prompt), shape [1, 77, 1024]
+    #         text_embeddings_uncond (tensor, optional): unconditional text embedding (for negative prompt), shape [1, 77, 1024]. Defaults to None.
+    #         guidance_scale (int, optional): weight scaling for guidance. Defaults to 100.
+    #         grad_scale (int, optional): gradient scaling. Defaults to 1.
+
+    #     Returns:
+    #         loss (tensor): SDS loss
+    #     """
+
+    #     # sample a timestep ~ U(0.02, 0.98) to avoid very high/low noise level
+    #     t = torch.randint(
+    #         self.min_step,
+    #         self.max_step + 1,
+    #         (latents.shape[0],),
+    #         dtype=torch.long,
+    #         device=self.device,
+    #     )
+    #     # predict the noise residual with unet, NO grad!
+    #     with torch.no_grad():
+    #         ### YOUR CODE HERE ###
+    #         noise  = torch.rand_like(latents)
+    #         latent_noisy = self.scheduler.add_noise(latents, noise, t)
+    #         noise_residual = self.unet(latent_noisy, t, text_embeddings)["sample"]
+
+ 
+
+    #         if text_embeddings_uncond is not None and guidance_scale != 1:
+    #             ### YOUR CODE HERE ###
+    #             un_noise_residual = self.unet(latent_noisy, t,text_embeddings_uncond)["sample"]
+    #             noise_residual = un_noise_residual + guidance_scale*(noise_residual - un_noise_residual)
+ 
+    #     # Compute SDS loss
+    #     w = 1 - self.alphas[t]
+    #     grad = grad_scale * w * (noise_residual - noise)
+    #     target = (latents - grad).detach()
+    #     loss = 0.5*F.mse_loss(latents, target)/ latents.shape[0]
+
+    #     return loss

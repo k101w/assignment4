@@ -14,8 +14,8 @@ from optimizer import Adan
 from PIL import Image
 from SDS import SDS
 from utils import prepare_embeddings, seed_everything
-
-
+torch.cuda.set_device(0)
+import pdb
 def optimize_nerf(
     sds,
     prompt,
@@ -29,7 +29,7 @@ def optimize_nerf(
     """
 
     # Step 1. Create text embeddings from prompt
-    embeddings = prepare_embeddings(sds, prompt, neg_prompt, view_dependent=False)
+    embeddings = prepare_embeddings(sds, prompt, neg_prompt, view_dependent=True)
 
     # Step 2. Set up NeRF model
     model = NeRFNetwork(args).to(device)
@@ -160,12 +160,17 @@ def optimize_nerf(
                 text_cond = embeddings["default"]
             else:
                 ### YOUR CODE HERE ###
-                pass
+                if -45 < azimuth < 45:
+                    text_cond = embeddings["front"]
+                elif azimuth > 135 or azimuth < -135:
+                    text_cond = embeddings["back"]
+                else:
+                    text_cond = embeddings["side"]
 
   
             ### YOUR CODE HERE ###
-            latents = 
-            loss = 
+            latents = sds.encode_imgs(torch.nn.functional.interpolate(pred_rgb, (512, 512)))
+            loss = sds.sds_loss(latents, text_cond, text_uncond)
 
             # regularizations
             if args.lambda_entropy > 0:
@@ -275,6 +280,7 @@ def optimize_nerf(
             all_preds = np.stack(all_preds, axis=0)
             all_preds_depth = np.stack(all_preds_depth, axis=0)
             # save the video
+            duration=1000*(1.0/25)
             imageio.mimwrite(
                 os.path.join(sds.output_dir, "videos", f"rgb_ep_{epoch}.mp4"),
                 all_preds,
@@ -293,18 +299,18 @@ def optimize_nerf(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--prompt", type=str, default="a hamburger")
+    parser.add_argument("--prompt", type=str, default="a standing corgi dog")
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--output_dir", type=str, default="output")
+    parser.add_argument("--output_dir", type=str, default="output_q24")
     parser.add_argument("--loss_scaling", type=int, default=1)
 
     ### YOUR CODE HERE ###
     # You wil need to tune the following parameters to obtain good NeRF results
     ### regularizations
-    parser.add_argument('--lambda_entropy', type=float, default=0, help="loss scale for alpha entropy")
-    parser.add_argument('--lambda_orient', type=float, default=0, help="loss scale for orientation")
+    parser.add_argument('--lambda_entropy', type=float, default=1e-3, help="loss scale for alpha entropy")
+    parser.add_argument('--lambda_orient', type=float, default=1e-2, help="loss scale for orientation")
     ### shading options
-    parser.add_argument('--latent_iter_ratio', type=float, default=0, help="training iters that only use albedo shading")
+    parser.add_argument('--latent_iter_ratio', type=float, default=0.15, help="training iters that only use albedo shading")
 
 
     parser.add_argument(

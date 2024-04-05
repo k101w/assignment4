@@ -9,7 +9,7 @@ from PIL import Image
 from SDS import SDS
 from tqdm import tqdm
 from utils import get_cosine_schedule_with_warmup, prepare_embeddings, seed_everything
-
+torch.cuda.set_device(0)
 
 def optimize_an_image(
     sds,
@@ -36,44 +36,52 @@ def optimize_an_image(
     scheduler = get_cosine_schedule_with_warmup(optimizer, 100, int(total_iter * 1.5))
 
     # Step 4. Training loop to optimize the latents
-    for i in tqdm(range(total_iter)):
-        optimizer.zero_grad()
-        # Forward pass to compute the loss
-        
-        ### YOUR CODE HERE ###
-        if args.sds_guidance:
-            loss = 
-        else:
-            loss = 
-
-        # Backward pass
-        loss.backward()
-        optimizer.step()
-        scheduler.step()
-
-        # clamping the latents to avoid over saturation
-        latents.data = latents.data.clip(-1, 1)
-
-        if i % log_interval == 0 or i == total_iter - 1:
-            # Decode the image to visualize the progress
-            img = sds.decode_latents(latents.detach())
-            # Save the image
-            output_im = Image.fromarray(img.astype("uint8"))
-            output_path = os.path.join(
-                sds.output_dir,
-                f"output_{prompt[0].replace(' ', '_')}_iter_{i}.png",
+    with tqdm(range(total_iter)) as tbar:
+        for i in tbar:
+            optimizer.zero_grad()
+            # Forward pass to compute the loss
+            ### YOUR CODE HERE ###
+            if args.sds_guidance:
+                loss = sds.sds_loss(
+                latents,
+                embeddings["default"],
+                text_embeddings_uncond=embeddings["uncond"],
             )
-            output_im.save(output_path)
+            else:
+                loss = sds.sds_loss(
+                latents,
+                embeddings["default"]
+            )
+            tbar.set_postfix(loss=loss.detach().cpu().item())
+            
+            # Backward pass
+            loss.backward()
+            optimizer.step()
+            scheduler.step()
+
+            # clamping the latents to avoid over saturation
+            latents.data = latents.data.clip(-1, 1)
+
+            if i % log_interval == 0 or i == total_iter - 1:
+                # Decode the image to visualize the progress
+                img = sds.decode_latents(latents.detach())
+                # Save the image
+                output_im = Image.fromarray(img.astype("uint8"))
+                output_path = os.path.join(
+                    sds.output_dir,
+                    f"output_{prompt[0].replace(' ', '_')}_iter_{i}.png",
+                )
+                output_im.save(output_path)
 
     return img
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--prompt", type=str, default="a hamburger")
+    parser.add_argument("--prompt", type=str, default="a grey tabby with a mouse ear hair band")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--output_dir", type=str, default="output")
-    parser.add_argument("--sds_guidance", type=int, default=0, choices=[0, 1], help="boolen option to add guidance to the SDS loss")
+    parser.add_argument("--sds_guidance", type=int, default=1, choices=[0, 1], help="boolen option to add guidance to the SDS loss")
     parser.add_argument(
         "--postfix",
         type=str,
